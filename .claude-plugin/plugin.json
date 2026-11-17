@@ -1,0 +1,15 @@
+{
+  "name": "claude-retro-theme",
+  "version": "0.1.0",
+  "description": "A CalcJump retro look for Claude Desktop: slate case, terracotta and cream Claude cards with a pixel mascot, slate cards for you, and a pixel dither rising from the bottom.",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "name": {
+      "type": "string",
+      "title": "Your name",
+      "description": "The name shown on your message cards, in capitals. Leave empty to show YOU.",
+      "default": "",
+      "required": false
+    }
+  }
+}

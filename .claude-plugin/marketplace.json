@@ -1,0 +1,5 @@
+{
+  "name": "claude-retro-theme",
+  "owner": { "name": "greg-althoff" },
+  "plugins": [{ "name": "claude-retro-theme", "source": "./" }]
+}
