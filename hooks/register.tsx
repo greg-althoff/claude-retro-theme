@@ -163,38 +163,38 @@ const headUser = (name: string) => {
 const INK = '#2b2724'
 type Parts = { Text: any; Box: any; Code: any }
 
-const inline = ({ Text }: Parts, text: string, color: string) =>
-  text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\s][^*]*\*)/).map((part, i) => {
+type Style = { isBold?: boolean; isItalic?: boolean }
+
+// Inline styles nest: bold may hold code (**No `node-pty`.**), italic may hold bold.
+const inline = (parts: Parts, text: string, color: string, style: Style = {}): RenderChildren[] => {
+  const { Text } = parts
+
+  return text.split(/(\*\*.+?\*\*|`[^`]+`|\*[^*\s][^*]*\*)/).map((part, i) => {
+    const weight = style.isBold === true ? ('bold' as const) : undefined
+
     if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-      return (
-        <Text key={i} weight="bold" color={color}>
-          {part.slice(2, -2)}
-        </Text>
-      )
+      return <Text key={i}>{inline(parts, part.slice(2, -2), color, { ...style, isBold: true })}</Text>
     }
 
     if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
       return (
-        <Text key={i} mono color={color} backgroundColor="#ddd3c8">
+        <Text key={i} mono weight={weight} italic={style.isItalic} color={color} backgroundColor="#ddd3c8">
           {part.slice(1, -1)}
         </Text>
       )
     }
 
     if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
-      return (
-        <Text key={i} italic color={color}>
-          {part.slice(1, -1)}
-        </Text>
-      )
+      return <Text key={i}>{inline(parts, part.slice(1, -1), color, { ...style, isItalic: true })}</Text>
     }
 
     return (
-      <Text key={i} color={color}>
+      <Text key={i} weight={weight} italic={style.isItalic} color={color}>
         {part}
       </Text>
     )
   })
+}
 
 const blocks = (parts: Parts, source: string) => {
   const { Text, Box, Code } = parts
@@ -202,8 +202,30 @@ const blocks = (parts: Parts, source: string) => {
   const lines = source.split('\n')
   let paragraph: string[] = []
   let n = 0
+  // A list item waits here until its continuation lines are in; a blank line
+  // before the next block gives it breathing room, and none keeps a list tight.
+  let item: { level: number; mark: string; text: string; gap: number } | null = null
+  let gap = 0
 
   const flush = () => {
+    if (item !== null) {
+      const { level, mark, text, gap: above } = item
+
+      // A fixed marker column and a flexible text column, aligned at the top:
+      // wrapped lines hang under the text, not under the marker.
+      out.push(
+        <Box key={n++} flexDirection="row" alignItems="flex-start" marginTop={above} paddingLeft={1 + level * 2}>
+          <Box flexShrink={0} width={mark === '•' ? 2 : 3}>
+            <Text color={INK}>{mark}</Text>
+          </Box>
+          <Box flexGrow={1} flexShrink={1}>
+            <Text>{inline(parts, text, INK)}</Text>
+          </Box>
+        </Box>,
+      )
+      item = null
+    }
+
     if (paragraph.length > 0) {
       out.push(
         <Box key={n++} marginTop={out.length > 0 ? 1 : 0}>
@@ -241,17 +263,14 @@ const blocks = (parts: Parts, source: string) => {
 
     if (line.trim() === '') {
       flush()
+      gap = 1
     } else if (bullet !== null || numbered !== null) {
       flush()
       const m = (bullet ?? numbered) as RegExpMatchArray
-      const mark = bullet !== null ? '•' : `${m[2]}.`
+      const level = Math.min(4, Math.floor((m[1] as string).replace(/\t/g, '  ').length / 2))
 
-      out.push(
-        <Box key={n++} paddingLeft={Math.floor((m[1] as string).length / 2) + 1}>
-          <Text color={INK}>{mark} </Text>
-          <Text>{inline(parts, m[3] as string, INK)}</Text>
-        </Box>,
-      )
+      item = { level, mark: bullet !== null ? '•' : `${m[2]}.`, text: m[3] as string, gap: out.length > 0 ? gap : 0 }
+      gap = 0
     } else if (heading !== null) {
       flush()
       out.push(
@@ -261,6 +280,7 @@ const blocks = (parts: Parts, source: string) => {
           </Text>
         </Box>,
       )
+      gap = 0
     } else if (line.trim().startsWith('|')) {
       flush()
       out.push(
@@ -268,8 +288,13 @@ const blocks = (parts: Parts, source: string) => {
           {line}
         </Text>,
       )
+      gap = 0
+    } else if (item !== null && /^\s+\S/.test(line)) {
+      // An indented line under a list item is part of that item.
+      item.text += ` ${line.trim()}`
     } else {
       paragraph.push(line.trim())
+      gap = 0
     }
   }
   flush()
@@ -353,7 +378,34 @@ export const register: Register = (on, options) => {
       return next(e)
     }
 
-    const { Box, Text, Svg, Code } = $.ui.resolve(e)
+    const { Box, Text, Svg, Code, Button } = $.ui.resolve(e)
+
+    // The app's own "reply to selection" belongs to the message rows these cards
+    // replace, so this does the same by hand: select text in a reply, press
+    // Reply, and the selection lands in your prompt box as a quote.
+    const reply = (
+      <Button
+        key={`reply-${e.requestId}`}
+        label="↩ Reply to selection"
+        plain
+        onPress={async () => {
+          const selected = await $.ui.selection()
+          const text = selected?.text.trim() ?? ''
+
+          if (text === '') {
+            $.ui.toast('Select some text in a reply first, then press Reply.')
+
+            return
+          }
+          const quote = text
+            .split('\n')
+            .map(line => `> ${line}`)
+            .join('\n')
+
+          await $.prompt.fill({ text: `${quote}\n\n`, mode: 'insert' })
+        }}
+      />
+    )
 
     return frame({ Box, Svg }, {
       frameColor: '#ca7c5f',
@@ -361,6 +413,7 @@ export const register: Register = (on, options) => {
       head: HEAD_CLAUDE,
       headAlt: 'Claude, the pixel mascot',
       isOpen: false,
+      action: reply,
       body: blocks({ Text, Box, Code }, e.props.text),
     })
   })
@@ -372,7 +425,7 @@ export const register: Register = (on, options) => {
 // header and body win back with one-cell negative margins.
 function frame(
   { Box, Svg }: { Box: any; Svg: any },
-  opts: { frameColor: string; bodyColor: string; head: string; headWidth?: number; headAlt: string; isOpen: boolean; body: RenderChildren },
+  opts: { frameColor: string; bodyColor: string; head: string; headWidth?: number; headAlt: string; isOpen: boolean; action?: RenderChildren; body: RenderChildren },
 ) {
   const outer = opts.isOpen ? cardOpen : card
 
@@ -382,6 +435,11 @@ function frame(
         <Box paddingLeft={1}>
           <Svg source={opts.head} alt={opts.headAlt} width={opts.headWidth ?? 160} height={HEAD_H} />
         </Box>
+        {opts.action === undefined ? null : (
+          <Box flexGrow={1} justifyContent="flex-end" paddingRight={2}>
+            {opts.action}
+          </Box>
+        )}
       </Box>
       <Box marginX={-1}>
         <Box flexDirection="column" flexGrow={1} borderStyle="round" borderColor={opts.bodyColor} backgroundColor={opts.bodyColor} paddingX={2}>
