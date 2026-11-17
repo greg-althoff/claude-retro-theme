@@ -6,7 +6,7 @@ import { makeColors } from './make-colors.js'
 
 // Prompts you sent with an image or file: the message row carries only text,
 // so the mod notes them as they're sent and keeps the app's own row for them.
-const withMedia = atom({ plugin: 'claude-retro-theme', key: 'withMedia' } as const, [] as MediaTexts, {
+const withMedia = atom({ plugin: 'calcjump-retro-theme', key: 'withMedia' } as const, [] as MediaTexts, {
   shape: 'media-1',
 })
 
@@ -311,11 +311,13 @@ export const register: Register = (on, options) => {
   // You: a grey-slate card, sunburst and your name in yellow. Every message of
   // yours, whichever app sent it (Desktop's arrive as its own, not the
   // terminal's); only background-task notices and other agents' messages pass.
+  // Notes a prompt sent with an attachment. A failed note never holds up the
+  // prompt: it's caught, and the prompt goes on as sent.
   on('prompt.submit', async ($, e, next) => {
     if (e.attachments !== undefined && e.attachments.length > 0) {
       const text = e.text
 
-      await update($, withMedia, list => [...list.filter(one => one !== text), text].slice(-100))
+      await update($, withMedia, list => [...list.filter(one => one !== text), text].slice(-100)).catch(() => undefined)
     }
 
     return next(e)

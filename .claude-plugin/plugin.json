@@ -1,7 +1,9 @@
 {
-  "name": "claude-retro-theme",
+  "name": "calcjump-retro-theme",
   "version": "0.1.0",
   "description": "A CalcJump retro look for Claude Desktop: slate case, terracotta and cream Claude cards with a pixel mascot, slate cards for you, and a pixel dither rising from the bottom.",
+  "author": { "name": "greg-althoff", "url": "https://github.com/greg-althoff" },
+  "homepage": "https://github.com/greg-althoff/claude-retro-theme",
   "types": "./types/index.d.ts",
   "userConfig": {
     "name": {

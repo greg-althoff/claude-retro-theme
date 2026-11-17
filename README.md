@@ -16,7 +16,7 @@ It's a Claude Code mod: a small plugin that changes how the app looks. It only c
 At the prompt of a terminal Claude Code session:
 
 ```
-/plugin install claude-retro-theme --marketplace greg-althoff/claude-retro-theme
+/plugin install calcjump-retro-theme --marketplace greg-althoff/claude-retro-theme
 ```
 
 Answer `y` to add the marketplace, then pick a scope (user scope applies it to every session).
@@ -24,7 +24,7 @@ Answer `y` to add the marketplace, then pick a scope (user scope applies it to e
 From a shell:
 
 ```bash
-claude plugin install claude-retro-theme --marketplace greg-althoff/claude-retro-theme
+claude plugin install calcjump-retro-theme --marketplace greg-althoff/claude-retro-theme
 ```
 
 In the Claude desktop app, where `/plugin` doesn't run: click **+** next to the prompt box, then **Plugins**, **Add marketplace** with `greg-althoff/claude-retro-theme`, then **Add plugin**.

@@ -4,6 +4,6 @@ export type MediaTexts = string[]
 
 declare module 'claude-code' {
   interface PluginState {
-    'claude-retro-theme': { withMedia: Shaped<MediaTexts> }
+    'calcjump-retro-theme': { withMedia: Shaped<MediaTexts> }
   }
 }

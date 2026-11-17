@@ -1,5 +1,6 @@
 {
-  "name": "claude-retro-theme",
+  "name": "calcjump-retro-theme",
+  "description": "A retro pixel-art theme for Claude Desktop, inspired by the CalcJump calculator app.",
   "owner": { "name": "greg-althoff" },
-  "plugins": [{ "name": "claude-retro-theme", "source": "./" }]
+  "plugins": [{ "name": "calcjump-retro-theme", "source": "./" }]
 }
